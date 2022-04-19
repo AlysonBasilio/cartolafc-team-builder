@@ -1,0 +1,18 @@
+{
+  "name": "cartola",
+  "version": "0.0.1",
+  "description": "",
+  "main": "bundle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run build-starter-team && npm run build-finisher-team && npm run build-expert-team",
+    "build-starter-team": "rollup build-starter.js --file starter.js --format es",
+    "build-finisher-team": "rollup build-finisher.js --file finisher.js --format es",
+    "build-expert-team": "rollup build-expert.js --file expert.js --format es"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "rollup": "^2.70.2"
+  }
+}
