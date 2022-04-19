@@ -2,5 +2,9 @@
   "name": "Montar Cartola",
   "description": "Extensão para montar cartola de maneira automatizada",
   "version": "1.0",
-  "manifest_version": 3
+  "manifest_version": 3,
+  "permissions": ["activeTab", "scripting", "declarativeContent"],
+  "action": {
+    "default_popup": "popup.html"
+  }
 }

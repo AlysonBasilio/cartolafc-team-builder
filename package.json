@@ -8,11 +8,13 @@
     "build": "npm run build-starter-team && npm run build-finisher-team && npm run build-expert-team",
     "build-starter-team": "rollup build-starter.js --file starter.js --format es",
     "build-finisher-team": "rollup build-finisher.js --file finisher.js --format es",
-    "build-expert-team": "rollup build-expert.js --file expert.js --format es"
+    "build-expert-team": "rollup build-expert.js --file expert.js --format es",
+    "build-popup": "rollup build-expert.js --file popup.js --format es"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "eslint": "^8.13.0",
     "rollup": "^2.70.2"
   }
 }

@@ -13,7 +13,10 @@ class Player {
       principalParentElement.children[2].children[0].children[1].innerText
     );
     this.position =
-      principalParentElement.children[1].children[0].children[1].children[0].children[1].innerText;
+      principalParentElement.children[1].children[0].children[1].children[0].children[1].innerText.replace(
+        "É",
+        "E"
+      );
     this.matchesPlayed =
       this.position == "TÉCNICO"
         ? 1
