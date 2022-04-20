@@ -18,7 +18,7 @@ class Player {
         "E"
       );
     this.matchesPlayed =
-      this.position == "TÉCNICO"
+      this.position == "TECNICO"
         ? 1
         : Number.parseInt(
             principalParentElement.parentElement.parentElement.children[1].innerHTML

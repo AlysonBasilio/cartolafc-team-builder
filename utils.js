@@ -1,3 +1,6 @@
+import Player from "./Player";
+import Team from "./Team";
+
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -76,8 +79,8 @@ export function getLeastAndMostScorableTeams(teams) {
 
   return {
     leastScorableTeam,
-    mostScorableTeam
-  }
+    mostScorableTeam,
+  };
 }
 
 export async function getAllPlayersAndTeams() {
@@ -108,6 +111,6 @@ export async function getAllPlayersAndTeams() {
 
   return {
     allPlayers,
-    teams
-  }
+    teams,
+  };
 }

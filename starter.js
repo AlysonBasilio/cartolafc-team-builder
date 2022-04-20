@@ -1,7 +1,7 @@
 const principalTeamLimits = {
   GOLEIRO: 1,
   ZAGUEIRO: 2,
-  TÉCNICO: 1,
+  TECNICO: 1,
   LATERAL: 2,
   MEIA: 3,
   ATACANTE: 3,
@@ -10,7 +10,7 @@ const principalTeamLimits = {
 const principalTeamMinimumPrice = {
   GOLEIRO: 1000,
   ZAGUEIRO: 2000,
-  TÉCNICO: 1000,
+  TECNICO: 1000,
   LATERAL: 2000,
   MEIA: 3000,
   ATACANTE: 3000,
@@ -21,9 +21,96 @@ const secondaryTeamLimits = {
   ZAGUEIRO: 1,
   LATERAL: 1,
   MEIA: 1,
-  TÉCNICO: 0,
+  TECNICO: 0,
   ATACANTE: 1,
 };
+
+class Player {
+  constructor(el) {
+    this.el = el;
+    const principalParentElement =
+      el.parentElement.parentElement.parentElement.parentElement;
+    this.team =
+      principalParentElement.children[1].children[0].children[0].children[0].children[0].alt;
+    this.isPlayingForFortaleza = this.team === "Fortaleza";
+    this.awayTeam =
+      principalParentElement.children[2].children[0].children[3].children[0].children[0].children[2].children[0].alt;
+    this.isPlayingAgainstCeara = this.awayTeam === "Ceará";
+    this.averageScore = Number.parseFloat(
+      principalParentElement.children[2].children[0].children[1].innerText
+    );
+    this.position =
+      principalParentElement.children[1].children[0].children[1].children[0].children[1].innerText.replace(
+        "É",
+        "E"
+      );
+    this.matchesPlayed =
+      this.position == "TECNICO"
+        ? 1
+        : Number.parseInt(
+            principalParentElement.parentElement.parentElement.children[1].innerHTML
+              .split("EM ")[1]
+              .split(" JOGOS")[0]
+          );
+    this.valorization =
+      Number.parseFloat(el.innerText) *
+      (el.className.split(" ").includes("pont-negativa") ? -1 : 1);
+    this.currentValue = Number.parseFloat(
+      principalParentElement.children[5].children[0].children[0].innerText.split(
+        " "
+      )[1]
+    );
+    const initialPrice = this.currentValue - this.valorization;
+    this.name =
+      principalParentElement.children[1].children[0].children[1].children[0].children[0].innerText;
+    this.percentualValorization = this.valorization / initialPrice;
+    this.totalScore = this.averageScore * this.matchesPlayed;
+  }
+
+  isPlayingAgainstMostScorableTeam(mostScorableTeam) {
+    return this.awayTeam === mostScorableTeam.name;
+  }
+
+  isPlayingForLeastScorableTeam(leastScorableTeam) {
+    return this.team === leastScorableTeam.name;
+  }
+
+  get isPlayingForTheHomeTeam() {
+    const homeTeam =
+      this.el.parentElement.parentElement.parentElement.parentElement
+        .children[2].children[0].children[3].children[0].children[0].children[0]
+        .children[0].alt;
+    return this.team === homeTeam;
+  }
+
+  isAcceptable(mostScorableTeam, leastScorableTeam) {
+    return (
+      !this.isPlayingForFortaleza &&
+      !this.isPlayingAgainstCeara &&
+      this.isPlayingForTheHomeTeam &&
+      this.averageScore > 0 &&
+      !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
+      !this.isPlayingForLeastScorableTeam(leastScorableTeam)
+    );
+  }
+
+  buy() {
+    this.el.parentElement.parentElement.parentElement.parentElement.children[6].children[0].children[0].click();
+  }
+}
+
+class Team {
+  constructor(name) {
+    this.name = name;
+    this.players = [];
+    this.totalScore = 0;
+  }
+
+  addPlayer(player) {
+    this.players.push(player);
+    this.totalScore += player.totalScore;
+  }
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -103,8 +190,8 @@ function getLeastAndMostScorableTeams(teams) {
 
   return {
     leastScorableTeam,
-    mostScorableTeam
-  }
+    mostScorableTeam,
+  };
 }
 
 async function getAllPlayersAndTeams() {
@@ -135,8 +222,8 @@ async function getAllPlayersAndTeams() {
 
   return {
     allPlayers,
-    teams
-  }
+    teams,
+  };
 }
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();

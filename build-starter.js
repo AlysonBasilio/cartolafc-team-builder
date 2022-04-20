@@ -7,6 +7,7 @@ import {
   sortPlayersByValorizationAsc,
   getLeastAndMostScorableTeams,
   getAllPlayersAndTeams,
+  sellAllPlayers,
 } from "./utils";
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();
