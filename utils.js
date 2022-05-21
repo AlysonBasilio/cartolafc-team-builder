@@ -41,15 +41,35 @@ export async function scrollUntilTheEndOfThePage() {
   }
 }
 
+function comparePlayersValorizationAsc(playerA, playerB) {
+  return playerA.valorization - playerB.valorization
+}
+
+function comparePlayersTotalScoreDesc(playerA, playerB) {
+  return playerB.totalScore - playerA.totalScore
+}
+
+function comparePlayersIndexScoreAsc(playerA, playerB) {
+  return playerA.indexScore - playerB.indexScore
+}
+
 export function sortPlayersByValorizationAsc(players) {
   return players.sort((a, b) => {
-    const difference = a.valorization - b.valorization;
+    const difference = comparePlayersValorizationAsc(a, b);
 
     if (Number.parseInt(difference * 100) === 0) {
-      return b.totalScore - a.totalScore;
+      return comparePlayersTotalScoreDesc(a, b);
     }
     return difference;
   });
+}
+
+export function sortPlayersByTotalScoreDesc(players) {
+  return players.sort(comparePlayersTotalScoreDesc);
+}
+
+export function sortPlayersByIndexScoreAsc(players) {
+  return players.sort(comparePlayersIndexScoreAsc);
 }
 
 export function getLeastAndMostScorableTeams(teams) {
@@ -113,4 +133,8 @@ export async function getAllPlayersAndTeams() {
     allPlayers,
     teams,
   };
+}
+
+export function getTeamMaxValue() {
+  return Number(document.querySelector("body > div.cartola-page > div.cartola-conteudo.well > ui-view > div.row.small-collapse.cartola-time-content > div.small-22.small-offset-1.large-20.large-offset-2.xxlarge-14.xxlarge-offset-5 > div.row.small-collapse.cartola-time__share-e-carteira > div:nth-child(2) > div > div:nth-child(3) > div.cartola-time__custo__valor.cartola-time__custo__valor--barra").innerText.replace(/[^0-9.]/gi, ''))
 }

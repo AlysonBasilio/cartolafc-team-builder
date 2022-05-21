@@ -1,7 +1,7 @@
 const principalTeamLimits = {
   GOLEIRO: 1,
   ZAGUEIRO: 2,
-  TÉCNICO: 1,
+  TECNICO: 1,
   LATERAL: 2,
   MEIA: 3,
   ATACANTE: 3,
@@ -10,7 +10,7 @@ const principalTeamLimits = {
 const principalTeamMinimumPrice = {
   GOLEIRO: 1000,
   ZAGUEIRO: 2000,
-  TÉCNICO: 1000,
+  TECNICO: 1000,
   LATERAL: 2000,
   MEIA: 3000,
   ATACANTE: 3000,
@@ -21,9 +21,138 @@ const secondaryTeamLimits = {
   ZAGUEIRO: 1,
   LATERAL: 1,
   MEIA: 1,
-  TÉCNICO: 0,
+  TECNICO: 0,
   ATACANTE: 1,
 };
+
+const teamRivals = {
+  'América-MG': ['Atlético-MG'],
+  'Athlético-PR': ['Coritiba'],
+  'Atlético-GO': ['Goiás'],
+  'Atlético-MG': ['América-MG'],
+  'Avaí': [],
+  'Botafogo': ['Fluminense', 'Flamengo'],
+  'Bragantino': [],
+  'Ceará': ['Fortaleza'],
+  'Corinthians': ['Santos', 'Palmeiras', 'São Paulo'],
+  'Coritiba': ['Athlético-PR'],
+  'Cuiabá': [],
+  'Flamengo': ['Botafogo', 'Fluminense'],
+  'Fluminense': ['Botafogo', 'Flamengo'],
+  'Fortaleza': ['Ceará'],
+  'Goiás': ['Atlético-GO'],
+  'Internacional': [],
+  'Juventude': [],
+  'Palmeiras': ['Corinthians', 'Santos', 'São Paulo'],
+  'Santos': ['Corinthians', 'Palmeiras', 'São Paulo'],
+  'São Paulo': ['Santos', 'Palmeiras', 'Corinthians'],
+};
+
+class Player {
+  constructor(el) {
+    this.el = el;
+    const principalParentElement =
+      el.parentElement.parentElement.parentElement.parentElement;
+    this.team =
+      principalParentElement.children[1].children[0].children[0].children[0].children[0].alt;
+    this.isPlayingForFortaleza = this.team === "Fortaleza";
+    this.awayTeam =
+      principalParentElement.children[2].children[0].children[3].children[0].children[0].children[2].children[0].alt;
+    this.isPlayingAgainstCeara = this.awayTeam === "Ceará";
+    this.averageScore = Number.parseFloat(
+      principalParentElement.children[2].children[0].children[1].innerText
+    );
+    this.position =
+      principalParentElement.children[1].children[0].children[1].children[0].children[1].innerText.replace(
+        "É",
+        "E"
+      );
+    this.matchesPlayed =
+      this.position == "TECNICO"
+        ? 1
+        : Number.parseInt(
+            principalParentElement.parentElement.parentElement.children[1].innerHTML
+              .split("EM ")[1]
+              .split(" JOGOS")[0]
+          );
+    this.valorization =
+      Number.parseFloat(el.innerText) *
+      (el.className.split(" ").includes("pont-negativa") ? -1 : 1);
+    this.currentValue = Number.parseFloat(
+      principalParentElement.children[5].children[0].children[0].innerText.split(
+        " "
+      )[1]
+    );
+    const initialPrice = this.currentValue - this.valorization;
+    this.name =
+      principalParentElement.children[1].children[0].children[1].children[0].children[0].innerText;
+    this.percentualValorization = this.valorization / initialPrice;
+    this.totalScore = this.averageScore * this.matchesPlayed;
+    this.indexes = {};
+  }
+
+  isPlayingAgainstMostScorableTeam(mostScorableTeam) {
+    return this.awayTeam === mostScorableTeam.name;
+  }
+
+  isPlayingForLeastScorableTeam(leastScorableTeam) {
+    return this.team === leastScorableTeam.name;
+  }
+
+  get homeTeam() {
+    return this.el.parentElement.parentElement.parentElement.parentElement
+    .children[2].children[0].children[3].children[0].children[0].children[0]
+    .children[0].alt;
+  }
+
+  get isPlayingForTheHomeTeam() {
+    return this.team === this.homeTeam;
+  }
+
+  get playingAgainstTeam() {
+    return this.isPlayingForTheHomeTeam ? this.awayTeam : this.homeTeam
+  }
+
+  get isPlayingAgainstRival() {
+    return teamRivals[this.team].includes(this.playingAgainstTeam)
+  }
+
+  isAcceptable(mostScorableTeam, leastScorableTeam) {
+    return (
+      !this.isPlayingForFortaleza &&
+      !this.isPlayingAgainstCeara &&
+      this.averageScore > 0 &&
+      !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
+      !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
+      !this.isPlayingAgainstRival
+    );
+  }
+
+  buy() {
+    this.el.parentElement.parentElement.parentElement.parentElement.children[6].children[0].children[0].click();
+  }
+
+  setIndex(key, value) {
+    this.indexes[key] = value;
+  }
+
+  get indexScore() {
+    return this.indexes.valorization * this.indexes.totalScore
+  }
+}
+
+class Team {
+  constructor(name) {
+    this.name = name;
+    this.players = [];
+    this.totalScore = 0;
+  }
+
+  addPlayer(player) {
+    this.players.push(player);
+    this.totalScore += player.totalScore;
+  }
+}
 
 function sleep$1(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -65,12 +194,20 @@ async function scrollUntilTheEndOfThePage() {
   }
 }
 
+function comparePlayersValorizationAsc(playerA, playerB) {
+  return playerA.valorization - playerB.valorization
+}
+
+function comparePlayersTotalScoreDesc(playerA, playerB) {
+  return playerB.totalScore - playerA.totalScore
+}
+
 function sortPlayersByValorizationAsc(players) {
   return players.sort((a, b) => {
-    const difference = a.valorization - b.valorization;
+    const difference = comparePlayersValorizationAsc(a, b);
 
     if (Number.parseInt(difference * 100) === 0) {
-      return b.totalScore - a.totalScore;
+      return comparePlayersTotalScoreDesc(a, b);
     }
     return difference;
   });
@@ -103,164 +240,94 @@ function getLeastAndMostScorableTeams(teams) {
 
   return {
     leastScorableTeam,
-    mostScorableTeam
-  }
+    mostScorableTeam,
+  };
 }
 
-class Player {
-  constructor(el) {
-    this.el = el;
-    const principalParentElement =
-      el.parentElement.parentElement.parentElement.parentElement;
-    this.team =
-      principalParentElement.children[1].children[0].children[0].children[0].children[0].alt;
-    this.isPlayingForFortaleza = this.team === "Fortaleza";
-    this.awayTeam =
-      principalParentElement.children[2].children[0].children[3].children[0].children[0].children[2].children[0].alt;
-    this.isPlayingAgainstCeara = this.awayTeam === "Ceará";
-    this.averageScore = Number.parseFloat(
-      principalParentElement.children[2].children[0].children[1].innerText
-    );
-    this.position =
-      principalParentElement.children[1].children[0].children[1].children[0].children[1].innerText;
-    this.matchesPlayed =
-      this.position == "TÉCNICO"
-        ? 1
-        : Number.parseInt(
-            principalParentElement.parentElement.parentElement.children[1].innerHTML
-              .split("EM ")[1]
-              .split(" JOGOS")[0]
-          );
-    this.valorization =
-      Number.parseFloat(el.innerText) *
-      (el.className.split(" ").includes("pont-negativa") ? -1 : 1);
-    this.currentValue = Number.parseFloat(
-      principalParentElement.children[5].children[0].children[0].innerText.split(
-        " "
-      )[1]
-    );
-    const initialPrice = this.currentValue - this.valorization;
-    this.name =
-      principalParentElement.children[1].children[0].children[1].children[0].children[0].innerText;
-    this.percentualValorization = this.valorization / initialPrice;
-    this.totalScore = this.averageScore * this.matchesPlayed;
+async function runBuildTeam() {
+  sellAllPlayers();
+
+  await scrollUntilTheEndOfThePage();
+
+  let allPlayers = [];
+  const allProbablePlayers = document.getElementsByClassName(
+    "cartola-atletas__preco-media"
+  );
+  const teams = {};
+
+  for (let i = 0; i < allProbablePlayers.length; i++) {
+    allProbablePlayers[
+      i
+    ].parentElement.parentElement.parentElement.parentElement.children[0].click();
+    await sleep(60);
+    const player = new Player(allProbablePlayers[i]);
+    allPlayers.push(player);
+
+    if (!teams[player.team]) {
+      teams[player.team] = new Team(player.team);
+    }
+
+    teams[player.team].addPlayer(player);
   }
 
-  isPlayingAgainstMostScorableTeam(mostScorableTeam) {
-    return this.awayTeam === mostScorableTeam.name;
-  }
+  const { leastScorableTeam, mostScorableTeam } =
+    getLeastAndMostScorableTeams(teams);
 
-  isPlayingForLeastScorableTeam(leastScorableTeam) {
-    return this.team === leastScorableTeam.name;
-  }
+  let acceptablePlayers = [];
 
-  get isPlayingForTheHomeTeam() {
-    const homeTeam =
-      this.el.parentElement.parentElement.parentElement.parentElement
-        .children[2].children[0].children[3].children[0].children[0].children[0]
-        .children[0].alt;
-    return this.team === homeTeam;
-  }
-
-  isAcceptable(mostScorableTeam, leastScorableTeam) {
-    return (
-      !this.isPlayingForFortaleza &&
-      !this.isPlayingAgainstCeara &&
-      this.isPlayingForTheHomeTeam &&
-      this.averageScore > 0 &&
-      !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
-      !this.isPlayingForLeastScorableTeam(leastScorableTeam)
-    );
-  }
-
-  buy() {
-    this.el.parentElement.parentElement.parentElement.parentElement.children[6].children[0].children[0].click();
-  }
-}
-
-class Team {
-  constructor(name) {
-    this.name = name;
-    this.players = [];
-    this.totalScore = 0;
-  }
-
-  addPlayer(player) {
-    this.players.push(player);
-    this.totalScore += player.totalScore;
-  }
-}
-
-sellAllPlayers();
-
-await scrollUntilTheEndOfThePage();
-
-let allPlayers = [];
-const allProbablePlayers = document.getElementsByClassName(
-  "cartola-atletas__preco-media"
-);
-const teams = {};
-
-for (let i = 0; i < allProbablePlayers.length; i++) {
-  allProbablePlayers[
-    i
-  ].parentElement.parentElement.parentElement.parentElement.children[0].click();
-  await sleep(60);
-  const player = new Player(allProbablePlayers[i]);
-  allPlayers.push(player);
-
-  if (!teams[player.team]) {
-    teams[player.team] = new Team(player.team);
-  }
-
-  teams[player.team].addPlayer(player);
-}
-
-const { leastScorableTeam, mostScorableTeam } =
-  getLeastAndMostScorableTeams(teams);
-
-let acceptablePlayers = [];
-
-for (let i = 0; i < allPlayers.length; i++) {
-  const player = allPlayers[i];
-  if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
-    acceptablePlayers.push(player);
-  }
-}
-
-acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
-
-const principalTeam = [];
-const secondaryTeam = [];
-const maxNumberOfPlayersByTeam = {};
-
-for (let j = 0; j < acceptablePlayers.length; j++) {
-  const player = acceptablePlayers[j];
-  if (!maxNumberOfPlayersByTeam[player.team]) {
-    maxNumberOfPlayersByTeam[player.team] = 0;
-  }
-
-  if (maxNumberOfPlayersByTeam[player.team] < 3) {
-    if (principalTeamLimits[player.position] > 0) {
-      principalTeam.push(player);
-      principalTeamLimits[player.position] -= 1;
-      if (player.currentValue < principalTeamMinimumPrice[player.position]) {
-        principalTeamMinimumPrice[player.position] = player.currentValue;
-      }
-      maxNumberOfPlayersByTeam[player.team] += 1;
-    } else if (
-      secondaryTeamLimits[player.position] > 0 &&
-      player.currentValue <= principalTeamMinimumPrice[player.position]
-    ) {
-      secondaryTeam.push(player);
-      secondaryTeamLimits[player.position] -= 1;
+  for (let i = 0; i < allPlayers.length; i++) {
+    const player = allPlayers[i];
+    if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
+      acceptablePlayers.push(player);
     }
   }
+
+  acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
+
+  const principalTeam = [];
+  const secondaryTeam = [];
+  const maxNumberOfPlayersByTeam = {};
+
+  for (let j = 0; j < acceptablePlayers.length; j++) {
+    const player = acceptablePlayers[j];
+    if (!maxNumberOfPlayersByTeam[player.team]) {
+      maxNumberOfPlayersByTeam[player.team] = 0;
+    }
+
+    if (maxNumberOfPlayersByTeam[player.team] < 3) {
+      if (principalTeamLimits[player.position] > 0) {
+        principalTeam.push(player);
+        principalTeamLimits[player.position] -= 1;
+        if (player.currentValue < principalTeamMinimumPrice[player.position]) {
+          principalTeamMinimumPrice[player.position] = player.currentValue;
+        }
+        maxNumberOfPlayersByTeam[player.team] += 1;
+      } else if (
+        secondaryTeamLimits[player.position] > 0 &&
+        player.currentValue <= principalTeamMinimumPrice[player.position]
+      ) {
+        secondaryTeam.push(player);
+        secondaryTeamLimits[player.position] -= 1;
+      }
+    }
+  }
+
+  for (let i = 0; i < principalTeam.length; i++) {
+    principalTeam[i].buy();
+  }
+
+  console.table(principalTeam);
+  console.table(secondaryTeam);
 }
 
-for (let i = 0; i < principalTeam.length; i++) {
-  principalTeam[i].buy();
-}
+const runScript = document.getElementById("runScript");
 
-console.table(principalTeam);
-console.table(secondaryTeam);
+// When the button is clicked, inject setPageBackgroundColor into current page
+runScript.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: runBuildTeam,
+  });
+});

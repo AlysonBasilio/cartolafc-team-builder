@@ -7,7 +7,9 @@ import {
   sortPlayersByValorizationAsc,
   getLeastAndMostScorableTeams,
   getAllPlayersAndTeams,
-  sellAllPlayers,
+  getTeamMaxValue,
+  sortPlayersByTotalScoreDesc,
+  sortPlayersByIndexScoreAsc,
 } from "./utils";
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();
@@ -24,9 +26,15 @@ for (let i = 0; i < allPlayers.length; i++) {
   }
 }
 
+acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index))
 acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index))
+acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
+let principalTeamValue = 0;
+const principalTeamMaxValue = getTeamMaxValue();
 const secondaryTeam = [];
 const maxNumberOfPlayersByTeam = {};
 
@@ -36,10 +44,17 @@ for (let j = 0; j < acceptablePlayers.length; j++) {
     maxNumberOfPlayersByTeam[player.team] = 0;
   }
 
-  if (maxNumberOfPlayersByTeam[player.team] < 3) {
+  const teamsWithPlayersOnMyTeam = Object.keys(maxNumberOfPlayersByTeam).filter(team => maxNumberOfPlayersByTeam[team] > 0)
+  console.log(teamsWithPlayersOnMyTeam)
+  console.log(player.team)
+  const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam)
+  if (maxNumberOfPlayersByTeam[player.team] < 3 &&
+    principalTeamValue+player.currentValue < principalTeamMaxValue &&
+    !isPlayingAgainstTeamWithPlayersOnMyTeam) {
     if (principalTeamLimits[player.position] > 0) {
       principalTeam.push(player);
       principalTeamLimits[player.position] -= 1;
+      principalTeamValue += player.currentValue;
       if (player.currentValue < principalTeamMinimumPrice[player.position]) {
         principalTeamMinimumPrice[player.position] = player.currentValue;
       }

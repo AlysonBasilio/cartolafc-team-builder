@@ -24,3 +24,26 @@ export const secondaryTeamLimits = {
   TECNICO: 0,
   ATACANTE: 1,
 };
+
+export const teamRivals = {
+  'América-MG': ['Atlético-MG'],
+  'Athlético-PR': ['Coritiba'],
+  'Atlético-GO': ['Goiás'],
+  'Atlético-MG': ['América-MG'],
+  'Avaí': [],
+  'Botafogo': ['Fluminense', 'Flamengo'],
+  'Bragantino': [],
+  'Ceará': ['Fortaleza'],
+  'Corinthians': ['Santos', 'Palmeiras', 'São Paulo'],
+  'Coritiba': ['Athlético-PR'],
+  'Cuiabá': [],
+  'Flamengo': ['Botafogo', 'Fluminense'],
+  'Fluminense': ['Botafogo', 'Flamengo'],
+  'Fortaleza': ['Ceará'],
+  'Goiás': ['Atlético-GO'],
+  'Internacional': [],
+  'Juventude': [],
+  'Palmeiras': ['Corinthians', 'Santos', 'São Paulo'],
+  'Santos': ['Corinthians', 'Palmeiras', 'São Paulo'],
+  'São Paulo': ['Santos', 'Palmeiras', 'Corinthians'],
+}

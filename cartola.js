@@ -25,6 +25,29 @@ const secondaryTeamLimits = {
   ATACANTE: 1,
 };
 
+const teamRivals = {
+  'América-MG': ['Atlético-MG'],
+  'Athlético-PR': ['Coritiba'],
+  'Atlético-GO': ['Goiás'],
+  'Atlético-MG': ['América-MG'],
+  'Avaí': [],
+  'Botafogo': ['Fluminense', 'Flamengo'],
+  'Bragantino': [],
+  'Ceará': ['Fortaleza'],
+  'Corinthians': ['Santos', 'Palmeiras', 'São Paulo'],
+  'Coritiba': ['Athlético-PR'],
+  'Cuiabá': [],
+  'Flamengo': ['Botafogo', 'Fluminense'],
+  'Fluminense': ['Botafogo', 'Flamengo'],
+  'Fortaleza': ['Ceará'],
+  'Goiás': ['Atlético-GO'],
+  'Internacional': [],
+  'Juventude': [],
+  'Palmeiras': ['Corinthians', 'Santos', 'São Paulo'],
+  'Santos': ['Corinthians', 'Palmeiras', 'São Paulo'],
+  'São Paulo': ['Santos', 'Palmeiras', 'Corinthians'],
+};
+
 class Player {
   constructor(el) {
     this.el = el;
@@ -65,6 +88,7 @@ class Player {
       principalParentElement.children[1].children[0].children[1].children[0].children[0].innerText;
     this.percentualValorization = this.valorization / initialPrice;
     this.totalScore = this.averageScore * this.matchesPlayed;
+    this.indexes = {};
   }
 
   isPlayingAgainstMostScorableTeam(mostScorableTeam) {
@@ -75,27 +99,45 @@ class Player {
     return this.team === leastScorableTeam.name;
   }
 
+  get homeTeam() {
+    return this.el.parentElement.parentElement.parentElement.parentElement
+    .children[2].children[0].children[3].children[0].children[0].children[0]
+    .children[0].alt;
+  }
+
   get isPlayingForTheHomeTeam() {
-    const homeTeam =
-      this.el.parentElement.parentElement.parentElement.parentElement
-        .children[2].children[0].children[3].children[0].children[0].children[0]
-        .children[0].alt;
-    return this.team === homeTeam;
+    return this.team === this.homeTeam;
+  }
+
+  get playingAgainstTeam() {
+    return this.isPlayingForTheHomeTeam ? this.awayTeam : this.homeTeam
+  }
+
+  get isPlayingAgainstRival() {
+    return teamRivals[this.team].includes(this.playingAgainstTeam)
   }
 
   isAcceptable(mostScorableTeam, leastScorableTeam) {
     return (
       !this.isPlayingForFortaleza &&
       !this.isPlayingAgainstCeara &&
-      this.isPlayingForTheHomeTeam &&
       this.averageScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
-      !this.isPlayingForLeastScorableTeam(leastScorableTeam)
+      !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
+      !this.isPlayingAgainstRival
     );
   }
 
   buy() {
     this.el.parentElement.parentElement.parentElement.parentElement.children[6].children[0].children[0].click();
+  }
+
+  setIndex(key, value) {
+    this.indexes[key] = value;
+  }
+
+  get indexScore() {
+    return this.indexes.valorization * this.indexes.totalScore
   }
 }
 
@@ -152,15 +194,35 @@ async function scrollUntilTheEndOfThePage() {
   }
 }
 
+function comparePlayersValorizationAsc(playerA, playerB) {
+  return playerA.valorization - playerB.valorization
+}
+
+function comparePlayersTotalScoreDesc(playerA, playerB) {
+  return playerB.totalScore - playerA.totalScore
+}
+
+function comparePlayersIndexScoreAsc(playerA, playerB) {
+  return playerA.indexScore - playerB.indexScore
+}
+
 function sortPlayersByValorizationAsc(players) {
   return players.sort((a, b) => {
-    const difference = a.valorization - b.valorization;
+    const difference = comparePlayersValorizationAsc(a, b);
 
     if (Number.parseInt(difference * 100) === 0) {
-      return b.totalScore - a.totalScore;
+      return comparePlayersTotalScoreDesc(a, b);
     }
     return difference;
   });
+}
+
+function sortPlayersByTotalScoreDesc(players) {
+  return players.sort(comparePlayersTotalScoreDesc);
+}
+
+function sortPlayersByIndexScoreAsc(players) {
+  return players.sort(comparePlayersIndexScoreAsc);
 }
 
 function getLeastAndMostScorableTeams(teams) {
@@ -226,6 +288,10 @@ async function getAllPlayersAndTeams() {
   };
 }
 
+function getTeamMaxValue() {
+  return Number(document.querySelector("body > div.cartola-page > div.cartola-conteudo.well > ui-view > div.row.small-collapse.cartola-time-content > div.small-22.small-offset-1.large-20.large-offset-2.xxlarge-14.xxlarge-offset-5 > div.row.small-collapse.cartola-time__share-e-carteira > div:nth-child(2) > div > div:nth-child(3) > div.cartola-time__custo__valor.cartola-time__custo__valor--barra").innerText.replace(/[^0-9.]/gi, ''))
+}
+
 const { allPlayers, teams } = await getAllPlayersAndTeams();
 
 const { leastScorableTeam, mostScorableTeam } =
@@ -240,9 +306,15 @@ for (let i = 0; i < allPlayers.length; i++) {
   }
 }
 
+acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index));
 acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index));
+acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
+let principalTeamValue = 0;
+const principalTeamMaxValue = getTeamMaxValue();
 const secondaryTeam = [];
 const maxNumberOfPlayersByTeam = {};
 
@@ -252,10 +324,17 @@ for (let j = 0; j < acceptablePlayers.length; j++) {
     maxNumberOfPlayersByTeam[player.team] = 0;
   }
 
-  if (maxNumberOfPlayersByTeam[player.team] < 3) {
+  const teamsWithPlayersOnMyTeam = Object.keys(maxNumberOfPlayersByTeam).filter(team => maxNumberOfPlayersByTeam[team] > 0);
+  console.log(teamsWithPlayersOnMyTeam);
+  console.log(player.team);
+  const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam);
+  if (maxNumberOfPlayersByTeam[player.team] < 3 &&
+    principalTeamValue+player.currentValue < principalTeamMaxValue &&
+    !isPlayingAgainstTeamWithPlayersOnMyTeam) {
     if (principalTeamLimits[player.position] > 0) {
       principalTeam.push(player);
       principalTeamLimits[player.position] -= 1;
+      principalTeamValue += player.currentValue;
       if (player.currentValue < principalTeamMinimumPrice[player.position]) {
         principalTeamMinimumPrice[player.position] = player.currentValue;
       }
