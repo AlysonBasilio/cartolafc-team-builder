@@ -7,24 +7,6 @@ const principalTeamLimits = {
   ATACANTE: 3,
 };
 
-const principalTeamMinimumPrice = {
-  GOLEIRO: 1000,
-  ZAGUEIRO: 2000,
-  TECNICO: 1000,
-  LATERAL: 2000,
-  MEIA: 3000,
-  ATACANTE: 3000,
-};
-
-const secondaryTeamLimits = {
-  GOLEIRO: 1,
-  ZAGUEIRO: 1,
-  LATERAL: 1,
-  MEIA: 1,
-  TECNICO: 0,
-  ATACANTE: 1,
-};
-
 const teamRivals = {
   'América-MG': ['Atlético-MG'],
   'Athlético-PR': ['Coritiba'],
@@ -154,7 +136,7 @@ class Team {
   }
 }
 
-function sleep$1(ms) {
+function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -190,27 +172,16 @@ async function scrollUntilTheEndOfThePage() {
   const rodape = document.getElementsByClassName("rodape__content")[0];
   while (!isElementInViewport(rodape)) {
     rodape.scrollIntoView();
-    await sleep$1(400);
+    await sleep(400);
   }
-}
-
-function comparePlayersValorizationAsc(playerA, playerB) {
-  return playerA.valorization - playerB.valorization
 }
 
 function comparePlayersTotalScoreDesc(playerA, playerB) {
   return playerB.totalScore - playerA.totalScore
 }
 
-function sortPlayersByValorizationAsc(players) {
-  return players.sort((a, b) => {
-    const difference = comparePlayersValorizationAsc(a, b);
-
-    if (Number.parseInt(difference * 100) === 0) {
-      return comparePlayersTotalScoreDesc(a, b);
-    }
-    return difference;
-  });
+function sortPlayersByTotalScoreDesc(players) {
+  return players.sort(comparePlayersTotalScoreDesc);
 }
 
 function getLeastAndMostScorableTeams(teams) {
@@ -244,7 +215,7 @@ function getLeastAndMostScorableTeams(teams) {
   };
 }
 
-async function runBuildTeam() {
+async function getAllPlayersAndTeams() {
   sellAllPlayers();
 
   await scrollUntilTheEndOfThePage();
@@ -270,64 +241,44 @@ async function runBuildTeam() {
     teams[player.team].addPlayer(player);
   }
 
-  const { leastScorableTeam, mostScorableTeam } =
-    getLeastAndMostScorableTeams(teams);
-
-  let acceptablePlayers = [];
-
-  for (let i = 0; i < allPlayers.length; i++) {
-    const player = allPlayers[i];
-    if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
-      acceptablePlayers.push(player);
-    }
-  }
-
-  acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
-
-  const principalTeam = [];
-  const secondaryTeam = [];
-  const maxNumberOfPlayersByTeam = {};
-
-  for (let j = 0; j < acceptablePlayers.length; j++) {
-    const player = acceptablePlayers[j];
-    if (!maxNumberOfPlayersByTeam[player.team]) {
-      maxNumberOfPlayersByTeam[player.team] = 0;
-    }
-
-    if (maxNumberOfPlayersByTeam[player.team] < 3) {
-      if (principalTeamLimits[player.position] > 0) {
-        principalTeam.push(player);
-        principalTeamLimits[player.position] -= 1;
-        if (player.currentValue < principalTeamMinimumPrice[player.position]) {
-          principalTeamMinimumPrice[player.position] = player.currentValue;
-        }
-        maxNumberOfPlayersByTeam[player.team] += 1;
-      } else if (
-        secondaryTeamLimits[player.position] > 0 &&
-        player.currentValue <= principalTeamMinimumPrice[player.position]
-      ) {
-        secondaryTeam.push(player);
-        secondaryTeamLimits[player.position] -= 1;
-      }
-    }
-  }
-
-  for (let i = 0; i < principalTeam.length; i++) {
-    principalTeam[i].buy();
-  }
-
-  console.table(principalTeam);
-  console.table(secondaryTeam);
+  return {
+    allPlayers,
+    teams,
+  };
 }
 
-const runScript = document.getElementById("runScript");
+const { allPlayers, teams } = await getAllPlayersAndTeams();
 
-// When the button is clicked, inject setPageBackgroundColor into current page
-runScript.addEventListener("click", async () => {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+const { leastScorableTeam, mostScorableTeam } =
+  getLeastAndMostScorableTeams(teams);
 
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    function: runBuildTeam,
-  });
-});
+let acceptablePlayers = [];
+
+for (let i = 0; i < allPlayers.length; i++) {
+  const player = allPlayers[i];
+  if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
+    acceptablePlayers.push(player);
+  }
+}
+
+acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+
+const principalTeam = [];
+const numberOfPlayersByTeam = {};
+
+for (let j = 0; j < acceptablePlayers.length; j++) {
+  const player = acceptablePlayers[j];
+  if (!numberOfPlayersByTeam[player.team]) {
+    numberOfPlayersByTeam[player.team] = 0;
+  }
+
+  const teamsWithPlayersOnMyTeam = Object.keys(numberOfPlayersByTeam).filter(team => numberOfPlayersByTeam[team] > 0);
+  const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam);
+  if (!isPlayingAgainstTeamWithPlayersOnMyTeam && principalTeamLimits[player.position] > 0) {
+    principalTeam.push(player);
+    principalTeamLimits[player.position] -= 1;
+    numberOfPlayersByTeam[player.team] += 1;
+  }
+}
+
+console.table(principalTeam);

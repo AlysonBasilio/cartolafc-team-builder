@@ -325,8 +325,6 @@ for (let j = 0; j < acceptablePlayers.length; j++) {
   }
 
   const teamsWithPlayersOnMyTeam = Object.keys(maxNumberOfPlayersByTeam).filter(team => maxNumberOfPlayersByTeam[team] > 0);
-  console.log(teamsWithPlayersOnMyTeam);
-  console.log(player.team);
   const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam);
   if (maxNumberOfPlayersByTeam[player.team] < 3 &&
     principalTeamValue+player.currentValue < principalTeamMaxValue &&
