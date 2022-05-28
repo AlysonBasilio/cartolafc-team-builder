@@ -5,6 +5,8 @@ import {
   getLeastAndMostScorableTeams,
   getAllPlayersAndTeams,
   sortPlayersByTotalScoreDesc,
+  sortPlayersByPotentialScoreDesc,
+  sortPlayersByIndexScoreAsc,
 } from "./utils";
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();
@@ -17,11 +19,16 @@ let acceptablePlayers = [];
 for (let i = 0; i < allPlayers.length; i++) {
   const player = allPlayers[i];
   if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
+    player.calculatePotentialScore(teams);
     acceptablePlayers.push(player);
   }
 }
 
 acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
+acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1))
+acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
 const numberOfPlayersByTeam = {};

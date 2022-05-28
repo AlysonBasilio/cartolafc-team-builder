@@ -47,3 +47,9 @@ export const teamRivals = {
   'Santos': ['Corinthians', 'Palmeiras', 'São Paulo'],
   'São Paulo': ['Santos', 'Palmeiras', 'Corinthians'],
 }
+
+export const SCORE_MULTIPLES = {
+  valorization: 0.1,
+  totalScore: 1.1,
+  potentialScore: 1.2,
+}

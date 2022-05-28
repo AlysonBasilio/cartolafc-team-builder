@@ -1,4 +1,4 @@
-import { teamRivals } from "./constants";
+import { SCORE_MULTIPLES, teamRivals } from "./constants";
 
 class Player {
   constructor(el) {
@@ -71,8 +71,8 @@ class Player {
 
   isAcceptable(mostScorableTeam, leastScorableTeam) {
     return (
-      !this.isPlayingForFortaleza &&
-      !this.isPlayingAgainstCeara &&
+      // !this.isPlayingForFortaleza &&
+      // !this.isPlayingAgainstCeara &&
       this.averageScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
       !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
@@ -89,7 +89,30 @@ class Player {
   }
 
   get indexScore() {
-    return this.indexes.valorization * this.indexes.totalScore
+    return Object.keys(this.indexes).reduce((k, acc) => (this.indexes[k] || 1)*acc*SCORE_MULTIPLES[k], 1)
+  }
+
+  get isOffensive() {
+    return ['ATACANTE', 'MEIA', 'LATERAL'].includes(this.position)
+  }
+
+  get isDefensive() {
+    return ['GOLEIRO', 'LATERAL', 'ZAGUEIRO'].includes(this.position)
+  }
+
+  calculatePotentialScore(teams) {
+    if (this.isOffensive) {
+      const playingAgainstTeamDefensivePlayers = teams[this.playingAgainstTeam].defensivePlayers
+      const score = playingAgainstTeamDefensivePlayers.map(player => player.averageScore).reduce((v, acc) => this.averageScore - v, 0)
+      this.potentialScore = score
+      return
+    } else if (this.isDefensive) {
+      const playingAgainstTeamOffensivePlayers = teams[this.playingAgainstTeam].offensivePlayers
+      const score = playingAgainstTeamOffensivePlayers.map(player => player.averageScore).reduce((v, acc) => this.averageScore - v, 0)
+      this.potentialScore = score
+      return
+    }
+    this.potentialScore = 0
   }
 }
 

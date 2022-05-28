@@ -4,12 +4,13 @@ import {
   secondaryTeamLimits,
 } from "./constants";
 import {
-  sortPlayersByValorizationAsc,
-  getLeastAndMostScorableTeams,
   getAllPlayersAndTeams,
+  getLeastAndMostScorableTeams,
   getTeamMaxValue,
-  sortPlayersByTotalScoreDesc,
   sortPlayersByIndexScoreAsc,
+  sortPlayersByPotentialScoreDesc,
+  sortPlayersByTotalScoreDesc,
+  sortPlayersByValorizationAsc,
 } from "./utils";
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();
@@ -22,14 +23,17 @@ let acceptablePlayers = [];
 for (let i = 0; i < allPlayers.length; i++) {
   const player = allPlayers[i];
   if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
+    player.calculatePotentialScore(teams);
     acceptablePlayers.push(player);
   }
 }
 
 acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index))
+acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
 acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index))
+acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index+1))
+acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1))
 acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];

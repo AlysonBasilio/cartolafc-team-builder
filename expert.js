@@ -30,6 +30,12 @@ const teamRivals = {
   'São Paulo': ['Santos', 'Palmeiras', 'Corinthians'],
 };
 
+const SCORE_MULTIPLES = {
+  valorization: 0.1,
+  totalScore: 1.1,
+  potentialScore: 1.2,
+};
+
 class Player {
   constructor(el) {
     this.el = el;
@@ -101,8 +107,8 @@ class Player {
 
   isAcceptable(mostScorableTeam, leastScorableTeam) {
     return (
-      !this.isPlayingForFortaleza &&
-      !this.isPlayingAgainstCeara &&
+      // !this.isPlayingForFortaleza &&
+      // !this.isPlayingAgainstCeara &&
       this.averageScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
       !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
@@ -119,7 +125,30 @@ class Player {
   }
 
   get indexScore() {
-    return this.indexes.valorization * this.indexes.totalScore
+    return Object.keys(this.indexes).reduce((k, acc) => (this.indexes[k] || 1)*acc*SCORE_MULTIPLES[k], 1)
+  }
+
+  get isOffensive() {
+    return ['ATACANTE', 'MEIA', 'LATERAL'].includes(this.position)
+  }
+
+  get isDefensive() {
+    return ['GOLEIRO', 'LATERAL', 'ZAGUEIRO'].includes(this.position)
+  }
+
+  calculatePotentialScore(teams) {
+    if (this.isOffensive) {
+      const playingAgainstTeamDefensivePlayers = teams[this.playingAgainstTeam].defensivePlayers;
+      const score = playingAgainstTeamDefensivePlayers.map(player => player.averageScore).reduce((v, acc) => this.averageScore - v, 0);
+      this.potentialScore = score;
+      return
+    } else if (this.isDefensive) {
+      const playingAgainstTeamOffensivePlayers = teams[this.playingAgainstTeam].offensivePlayers;
+      const score = playingAgainstTeamOffensivePlayers.map(player => player.averageScore).reduce((v, acc) => this.averageScore - v, 0);
+      this.potentialScore = score;
+      return
+    }
+    this.potentialScore = 0;
   }
 }
 
@@ -133,6 +162,14 @@ class Team {
   addPlayer(player) {
     this.players.push(player);
     this.totalScore += player.totalScore;
+  }
+
+  get defensivePlayers() {
+    return this.players.filter(player => player.isDefensive)
+  }
+
+  get offensivePlayers() {
+    return this.players.filter(player => player.isOffensive)
   }
 }
 
@@ -180,8 +217,24 @@ function comparePlayersTotalScoreDesc(playerA, playerB) {
   return playerB.totalScore - playerA.totalScore
 }
 
+function comparePlayersPotentialScoreDesc(playerA, playerB) {
+  return playerB.potentialScore - playerA.potentialScore
+}
+
+function comparePlayersIndexScoreAsc(playerA, playerB) {
+  return playerA.indexScore - playerB.indexScore
+}
+
 function sortPlayersByTotalScoreDesc(players) {
   return players.sort(comparePlayersTotalScoreDesc);
+}
+
+function sortPlayersByPotentialScoreDesc(players) {
+  return players.sort(comparePlayersPotentialScoreDesc);
+}
+
+function sortPlayersByIndexScoreAsc(players) {
+  return players.sort(comparePlayersIndexScoreAsc);
 }
 
 function getLeastAndMostScorableTeams(teams) {
@@ -257,11 +310,16 @@ let acceptablePlayers = [];
 for (let i = 0; i < allPlayers.length; i++) {
   const player = allPlayers[i];
   if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
+    player.calculatePotentialScore(teams);
     acceptablePlayers.push(player);
   }
 }
 
 acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1));
+acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
+acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1));
+acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
 const numberOfPlayersByTeam = {};

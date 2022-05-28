@@ -49,6 +49,10 @@ function comparePlayersTotalScoreDesc(playerA, playerB) {
   return playerB.totalScore - playerA.totalScore
 }
 
+function comparePlayersPotentialScoreDesc(playerA, playerB) {
+  return playerB.potentialScore - playerA.potentialScore
+}
+
 function comparePlayersIndexScoreAsc(playerA, playerB) {
   return playerA.indexScore - playerB.indexScore
 }
@@ -66,6 +70,10 @@ export function sortPlayersByValorizationAsc(players) {
 
 export function sortPlayersByTotalScoreDesc(players) {
   return players.sort(comparePlayersTotalScoreDesc);
+}
+
+export function sortPlayersByPotentialScoreDesc(players) {
+  return players.sort(comparePlayersPotentialScoreDesc);
 }
 
 export function sortPlayersByIndexScoreAsc(players) {
