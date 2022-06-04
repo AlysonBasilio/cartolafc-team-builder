@@ -49,6 +49,10 @@ function comparePlayersTotalScoreDesc(playerA, playerB) {
   return playerB.totalScore - playerA.totalScore
 }
 
+function comparePlayersMedianScoreDesc(playerA, playerB) {
+  return playerB.medianScore - playerA.medianScore
+}
+
 function comparePlayersPotentialScoreDesc(playerA, playerB) {
   return playerB.potentialScore - playerA.potentialScore
 }
@@ -70,6 +74,10 @@ export function sortPlayersByValorizationAsc(players) {
 
 export function sortPlayersByTotalScoreDesc(players) {
   return players.sort(comparePlayersTotalScoreDesc);
+}
+
+export function sortPlayersByMedianScoreDesc(players) {
+  return players.sort(comparePlayersMedianScoreDesc);
 }
 
 export function sortPlayersByPotentialScoreDesc(players) {
@@ -126,8 +134,9 @@ export async function getAllPlayersAndTeams() {
     allProbablePlayers[
       i
     ].parentElement.parentElement.parentElement.parentElement.children[0].click();
-    await sleep(60);
+    await sleep(260);
     const player = new Player(allProbablePlayers[i]);
+    await player.fetchPlayerScores();
     allPlayers.push(player);
 
     if (!teams[player.team]) {

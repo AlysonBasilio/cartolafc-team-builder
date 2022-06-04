@@ -50,6 +50,7 @@ export const teamRivals = {
 
 export const SCORE_MULTIPLES = {
   valorization: 0.1,
-  totalScore: 1.1,
-  potentialScore: 1.2,
+  totalScore: 0.3,
+  medianScore: 0.5,
+  potentialScore: 0.7,
 }

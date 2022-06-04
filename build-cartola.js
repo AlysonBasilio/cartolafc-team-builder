@@ -11,6 +11,7 @@ import {
   sortPlayersByPotentialScoreDesc,
   sortPlayersByTotalScoreDesc,
   sortPlayersByValorizationAsc,
+  sortPlayersByMedianScoreDesc,
 } from "./utils";
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();
@@ -28,9 +29,11 @@ for (let i = 0; i < allPlayers.length; i++) {
   }
 }
 
-acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
-acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
+// acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+// acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
+// acceptablePlayers = sortPlayersByMedianScoreDesc(acceptablePlayers);
+// acceptablePlayers.forEach((player, index) => player.setIndex('medianScore', index+1))
+// acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
 acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index+1))
 acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
 acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1))
@@ -75,5 +78,25 @@ for (let i = 0; i < principalTeam.length; i++) {
   principalTeam[i].buy();
 }
 
-console.table(principalTeam);
-console.table(secondaryTeam);
+console.table(principalTeam.map(player => ({
+  name: player.name,
+  position: player.position,
+  team: player.team,
+  playingAgainstTeam: player.playingAgainstTeam,
+  averageScore: player.averageScore,
+  medianScore: player.medianScore,
+  potentialScore: player.potentialScore,
+  totalScore: player.totalScore,
+  indexScore: player.indexScore,
+})));
+console.table(secondaryTeam.map(player => ({
+  name: player.name,
+  position: player.position,
+  team: player.team,
+  playingAgainstTeam: player.playingAgainstTeam,
+  averageScore: player.averageScore,
+  medianScore: player.medianScore,
+  potentialScore: player.potentialScore,
+  totalScore: player.totalScore,
+  indexScore: player.indexScore,
+})));

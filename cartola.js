@@ -50,8 +50,9 @@ const teamRivals = {
 
 const SCORE_MULTIPLES = {
   valorization: 0.1,
-  totalScore: 1.1,
-  potentialScore: 1.2,
+  totalScore: 0.3,
+  medianScore: 0.5,
+  potentialScore: 0.7,
 };
 
 class Player {
@@ -64,7 +65,7 @@ class Player {
     this.isPlayingForFortaleza = this.team === "Fortaleza";
     this.awayTeam =
       principalParentElement.children[2].children[0].children[3].children[0].children[0].children[2].children[0].alt;
-    this.isPlayingAgainstCeara = this.awayTeam === "Ceará";
+    this.isPlayingAgainstCeara = this.playingAgainstTeam === "Ceará";
     this.averageScore = Number.parseFloat(
       principalParentElement.children[2].children[0].children[1].innerText
     );
@@ -125,8 +126,8 @@ class Player {
 
   isAcceptable(mostScorableTeam, leastScorableTeam) {
     return (
-      // !this.isPlayingForFortaleza &&
-      // !this.isPlayingAgainstCeara &&
+      !this.isPlayingForFortaleza &&
+      !this.isPlayingAgainstCeara &&
       this.averageScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
       !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
@@ -143,7 +144,7 @@ class Player {
   }
 
   get indexScore() {
-    return Object.keys(this.indexes).reduce((k, acc) => (this.indexes[k] || 1)*acc*SCORE_MULTIPLES[k], 1)
+    return Object.keys(this.indexes).reduce((acc, k) => (this.indexes[k] || 1)*acc*(SCORE_MULTIPLES[k] || 1), 1)
   }
 
   get isOffensive() {
@@ -157,16 +158,32 @@ class Player {
   calculatePotentialScore(teams) {
     if (this.isOffensive) {
       const playingAgainstTeamDefensivePlayers = teams[this.playingAgainstTeam].defensivePlayers;
-      const score = playingAgainstTeamDefensivePlayers.map(player => player.averageScore).reduce((v, acc) => this.averageScore - v, 0);
-      this.potentialScore = score;
+      const score = playingAgainstTeamDefensivePlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
+      this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
       return
     } else if (this.isDefensive) {
       const playingAgainstTeamOffensivePlayers = teams[this.playingAgainstTeam].offensivePlayers;
-      const score = playingAgainstTeamOffensivePlayers.map(player => player.averageScore).reduce((v, acc) => this.averageScore - v, 0);
-      this.potentialScore = score;
+      const score = playingAgainstTeamOffensivePlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
+      this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
       return
     }
     this.potentialScore = 0;
+  }
+
+  get playerId() {
+    const url = new URL(this.el.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.children[1].children[0].children[0].children[0].children[1].children[2].children[0].href);
+    return url.searchParams.get('atleta_id')
+  }
+
+  async fetchPlayerScores() {
+    this.playerScores = await fetch(`https://api.cartola.globo.com/auth/mercado/atleta/${this.playerId}/pontuacao`).then(r => r.json());
+    const nums = [...this.playerScores.map(score => score.pontos).filter(p => p !== null).filter(p => p !== 0)].sort((a, b) => a - b);
+    if (nums.length <= 2) {
+      this.medianScore = 0;
+      return
+    }
+    const midPosition = Math.floor(nums.length / 2);
+    this.medianScore = nums.length % 2 !== 0 ? nums[midPosition] : (nums[midPosition - 1] + nums[midPosition]) / 2;
   }
 }
 
@@ -231,35 +248,12 @@ async function scrollUntilTheEndOfThePage() {
   }
 }
 
-function comparePlayersValorizationAsc(playerA, playerB) {
-  return playerA.valorization - playerB.valorization
-}
-
-function comparePlayersTotalScoreDesc(playerA, playerB) {
-  return playerB.totalScore - playerA.totalScore
-}
-
 function comparePlayersPotentialScoreDesc(playerA, playerB) {
   return playerB.potentialScore - playerA.potentialScore
 }
 
 function comparePlayersIndexScoreAsc(playerA, playerB) {
   return playerA.indexScore - playerB.indexScore
-}
-
-function sortPlayersByValorizationAsc(players) {
-  return players.sort((a, b) => {
-    const difference = comparePlayersValorizationAsc(a, b);
-
-    if (Number.parseInt(difference * 100) === 0) {
-      return comparePlayersTotalScoreDesc(a, b);
-    }
-    return difference;
-  });
-}
-
-function sortPlayersByTotalScoreDesc(players) {
-  return players.sort(comparePlayersTotalScoreDesc);
 }
 
 function sortPlayersByPotentialScoreDesc(players) {
@@ -316,8 +310,9 @@ async function getAllPlayersAndTeams() {
     allProbablePlayers[
       i
     ].parentElement.parentElement.parentElement.parentElement.children[0].click();
-    await sleep(60);
+    await sleep(260);
     const player = new Player(allProbablePlayers[i]);
+    await player.fetchPlayerScores();
     allPlayers.push(player);
 
     if (!teams[player.team]) {
@@ -352,9 +347,11 @@ for (let i = 0; i < allPlayers.length; i++) {
   }
 }
 
-acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1));
-acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
+// acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
+// acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
+// acceptablePlayers = sortPlayersByMedianScoreDesc(acceptablePlayers);
+// acceptablePlayers.forEach((player, index) => player.setIndex('medianScore', index+1))
+// acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
 acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index+1));
 acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
 acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1));
@@ -399,5 +396,25 @@ for (let i = 0; i < principalTeam.length; i++) {
   principalTeam[i].buy();
 }
 
-console.table(principalTeam);
-console.table(secondaryTeam);
+console.table(principalTeam.map(player => ({
+  name: player.name,
+  position: player.position,
+  team: player.team,
+  playingAgainstTeam: player.playingAgainstTeam,
+  averageScore: player.averageScore,
+  medianScore: player.medianScore,
+  potentialScore: player.potentialScore,
+  totalScore: player.totalScore,
+  indexScore: player.indexScore,
+})));
+console.table(secondaryTeam.map(player => ({
+  name: player.name,
+  position: player.position,
+  team: player.team,
+  playingAgainstTeam: player.playingAgainstTeam,
+  averageScore: player.averageScore,
+  medianScore: player.medianScore,
+  potentialScore: player.potentialScore,
+  totalScore: player.totalScore,
+  indexScore: player.indexScore,
+})));
