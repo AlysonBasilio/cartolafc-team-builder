@@ -1,12 +1,11 @@
 import {
   principalTeamLimits,
+  principalTeamMinimumPrice,
 } from "./constants";
 import {
-  getLeastAndMostScorableTeams,
   getAllPlayersAndTeams,
-  sortPlayersByTotalScoreDesc,
+  getLeastAndMostScorableTeams,
   sortPlayersByPotentialScoreDesc,
-  sortPlayersByIndexScoreAsc,
 } from "./utils";
 
 const { allPlayers, teams } = await getAllPlayersAndTeams();
@@ -18,19 +17,17 @@ let acceptablePlayers = [];
 
 for (let i = 0; i < allPlayers.length; i++) {
   const player = allPlayers[i];
+  player.calculatePotentialScore(teams);
+
   if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
-    player.calculatePotentialScore(teams);
     acceptablePlayers.push(player);
   }
 }
 
-acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
 acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1))
-acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
+let principalTeamValue = 0;
 const numberOfPlayersByTeam = {};
 
 for (let j = 0; j < acceptablePlayers.length; j++) {
@@ -39,13 +36,25 @@ for (let j = 0; j < acceptablePlayers.length; j++) {
     numberOfPlayersByTeam[player.team] = 0;
   }
 
-  const teamsWithPlayersOnMyTeam = Object.keys(numberOfPlayersByTeam).filter(team => numberOfPlayersByTeam[team] > 0)
-  const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam)
-  if (!isPlayingAgainstTeamWithPlayersOnMyTeam && principalTeamLimits[player.position] > 0) {
+  if (principalTeamLimits[player.position] > 0) {
     principalTeam.push(player);
     principalTeamLimits[player.position] -= 1;
+    principalTeamValue += player.currentValue;
+    if (player.currentValue < principalTeamMinimumPrice[player.position]) {
+      principalTeamMinimumPrice[player.position] = player.currentValue;
+    }
     numberOfPlayersByTeam[player.team] += 1;
   }
 }
 
-console.table(principalTeam);
+console.table(principalTeam.map(player => ({
+  name: player.name,
+  position: player.position,
+  team: player.team,
+  playingAgainstTeam: player.playingAgainstTeam,
+  averageScore: player.averageScore,
+  medianScore: player.medianScore,
+  potentialScore: player.potentialScore,
+  totalScore: player.totalScore,
+  indexScore: player.indexScore,
+})));

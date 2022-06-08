@@ -99,7 +99,7 @@ class Player {
   }
 
   isPlayingAgainstMostScorableTeam(mostScorableTeam) {
-    return this.awayTeam === mostScorableTeam.name;
+    return this.playingAgainstTeam === mostScorableTeam.name;
   }
 
   isPlayingForLeastScorableTeam(leastScorableTeam) {
@@ -129,6 +129,8 @@ class Player {
       !this.isPlayingForFortaleza &&
       !this.isPlayingAgainstCeara &&
       this.averageScore > 0 &&
+      this.potentialScore > 0 &&
+      this.medianScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
       !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
       !this.isPlayingAgainstRival
@@ -167,7 +169,10 @@ class Player {
       this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
       return
     }
-    this.potentialScore = 0;
+
+    const playingAgainstTeamPlayers = teams[this.playingAgainstTeam].players;
+    const score = playingAgainstTeamPlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
+    this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
   }
 
   get playerId() {
@@ -252,16 +257,8 @@ function comparePlayersPotentialScoreDesc(playerA, playerB) {
   return playerB.potentialScore - playerA.potentialScore
 }
 
-function comparePlayersIndexScoreAsc(playerA, playerB) {
-  return playerA.indexScore - playerB.indexScore
-}
-
 function sortPlayersByPotentialScoreDesc(players) {
   return players.sort(comparePlayersPotentialScoreDesc);
-}
-
-function sortPlayersByIndexScoreAsc(players) {
-  return players.sort(comparePlayersIndexScoreAsc);
 }
 
 function getLeastAndMostScorableTeams(teams) {
@@ -341,39 +338,28 @@ let acceptablePlayers = [];
 
 for (let i = 0; i < allPlayers.length; i++) {
   const player = allPlayers[i];
+  player.calculatePotentialScore(teams);
+
   if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
-    player.calculatePotentialScore(teams);
     acceptablePlayers.push(player);
   }
 }
 
-// acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
-// acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1))
-// acceptablePlayers = sortPlayersByMedianScoreDesc(acceptablePlayers);
-// acceptablePlayers.forEach((player, index) => player.setIndex('medianScore', index+1))
-// acceptablePlayers = sortPlayersByValorizationAsc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('valorization', index+1));
 acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1));
-acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
 let principalTeamValue = 0;
 const principalTeamMaxValue = getTeamMaxValue();
 const secondaryTeam = [];
-const maxNumberOfPlayersByTeam = {};
+const numberOfPlayersByTeam = {};
 
 for (let j = 0; j < acceptablePlayers.length; j++) {
   const player = acceptablePlayers[j];
-  if (!maxNumberOfPlayersByTeam[player.team]) {
-    maxNumberOfPlayersByTeam[player.team] = 0;
+  if (!numberOfPlayersByTeam[player.team]) {
+    numberOfPlayersByTeam[player.team] = 0;
   }
 
-  const teamsWithPlayersOnMyTeam = Object.keys(maxNumberOfPlayersByTeam).filter(team => maxNumberOfPlayersByTeam[team] > 0);
-  const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam);
-  if (maxNumberOfPlayersByTeam[player.team] < 3 &&
-    principalTeamValue+player.currentValue < principalTeamMaxValue &&
-    !isPlayingAgainstTeamWithPlayersOnMyTeam) {
+  if (principalTeamValue+player.currentValue < principalTeamMaxValue) {
     if (principalTeamLimits[player.position] > 0) {
       principalTeam.push(player);
       principalTeamLimits[player.position] -= 1;
@@ -381,11 +367,8 @@ for (let j = 0; j < acceptablePlayers.length; j++) {
       if (player.currentValue < principalTeamMinimumPrice[player.position]) {
         principalTeamMinimumPrice[player.position] = player.currentValue;
       }
-      maxNumberOfPlayersByTeam[player.team] += 1;
-    } else if (
-      secondaryTeamLimits[player.position] > 0 &&
-      player.currentValue <= principalTeamMinimumPrice[player.position]
-    ) {
+      numberOfPlayersByTeam[player.team] += 1;
+    } else if (secondaryTeamLimits[player.position] > 0 && player.currentValue <= principalTeamMinimumPrice[player.position]) {
       secondaryTeam.push(player);
       secondaryTeamLimits[player.position] -= 1;
     }

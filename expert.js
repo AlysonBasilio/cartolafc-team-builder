@@ -7,6 +7,15 @@ const principalTeamLimits = {
   ATACANTE: 3,
 };
 
+const principalTeamMinimumPrice = {
+  GOLEIRO: 1000,
+  ZAGUEIRO: 2000,
+  TECNICO: 1000,
+  LATERAL: 2000,
+  MEIA: 3000,
+  ATACANTE: 3000,
+};
+
 const teamRivals = {
   'América-MG': ['Atlético-MG'],
   'Athlético-PR': ['Coritiba'],
@@ -81,7 +90,7 @@ class Player {
   }
 
   isPlayingAgainstMostScorableTeam(mostScorableTeam) {
-    return this.awayTeam === mostScorableTeam.name;
+    return this.playingAgainstTeam === mostScorableTeam.name;
   }
 
   isPlayingForLeastScorableTeam(leastScorableTeam) {
@@ -111,6 +120,8 @@ class Player {
       !this.isPlayingForFortaleza &&
       !this.isPlayingAgainstCeara &&
       this.averageScore > 0 &&
+      this.potentialScore > 0 &&
+      this.medianScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
       !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
       !this.isPlayingAgainstRival
@@ -149,7 +160,10 @@ class Player {
       this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
       return
     }
-    this.potentialScore = 0;
+
+    const playingAgainstTeamPlayers = teams[this.playingAgainstTeam].players;
+    const score = playingAgainstTeamPlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
+    this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
   }
 
   get playerId() {
@@ -230,28 +244,12 @@ async function scrollUntilTheEndOfThePage() {
   }
 }
 
-function comparePlayersTotalScoreDesc(playerA, playerB) {
-  return playerB.totalScore - playerA.totalScore
-}
-
 function comparePlayersPotentialScoreDesc(playerA, playerB) {
   return playerB.potentialScore - playerA.potentialScore
 }
 
-function comparePlayersIndexScoreAsc(playerA, playerB) {
-  return playerA.indexScore - playerB.indexScore
-}
-
-function sortPlayersByTotalScoreDesc(players) {
-  return players.sort(comparePlayersTotalScoreDesc);
-}
-
 function sortPlayersByPotentialScoreDesc(players) {
   return players.sort(comparePlayersPotentialScoreDesc);
-}
-
-function sortPlayersByIndexScoreAsc(players) {
-  return players.sort(comparePlayersIndexScoreAsc);
 }
 
 function getLeastAndMostScorableTeams(teams) {
@@ -327,19 +325,17 @@ let acceptablePlayers = [];
 
 for (let i = 0; i < allPlayers.length; i++) {
   const player = allPlayers[i];
+  player.calculatePotentialScore(teams);
+
   if (player.isAcceptable(mostScorableTeam, leastScorableTeam)) {
-    player.calculatePotentialScore(teams);
     acceptablePlayers.push(player);
   }
 }
 
-acceptablePlayers = sortPlayersByTotalScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('totalScore', index+1));
 acceptablePlayers = sortPlayersByPotentialScoreDesc(acceptablePlayers);
-acceptablePlayers.forEach((player, index) => player.setIndex('potentialScore', index+1));
-acceptablePlayers = sortPlayersByIndexScoreAsc(acceptablePlayers);
 
 const principalTeam = [];
+let principalTeamValue = 0;
 const numberOfPlayersByTeam = {};
 
 for (let j = 0; j < acceptablePlayers.length; j++) {
@@ -348,13 +344,25 @@ for (let j = 0; j < acceptablePlayers.length; j++) {
     numberOfPlayersByTeam[player.team] = 0;
   }
 
-  const teamsWithPlayersOnMyTeam = Object.keys(numberOfPlayersByTeam).filter(team => numberOfPlayersByTeam[team] > 0);
-  const isPlayingAgainstTeamWithPlayersOnMyTeam = teamsWithPlayersOnMyTeam.includes(player.playingAgainstTeam);
-  if (!isPlayingAgainstTeamWithPlayersOnMyTeam && principalTeamLimits[player.position] > 0) {
+  if (principalTeamLimits[player.position] > 0) {
     principalTeam.push(player);
     principalTeamLimits[player.position] -= 1;
+    principalTeamValue += player.currentValue;
+    if (player.currentValue < principalTeamMinimumPrice[player.position]) {
+      principalTeamMinimumPrice[player.position] = player.currentValue;
+    }
     numberOfPlayersByTeam[player.team] += 1;
   }
 }
 
-console.table(principalTeam);
+console.table(principalTeam.map(player => ({
+  name: player.name,
+  position: player.position,
+  team: player.team,
+  playingAgainstTeam: player.playingAgainstTeam,
+  averageScore: player.averageScore,
+  medianScore: player.medianScore,
+  potentialScore: player.potentialScore,
+  totalScore: player.totalScore,
+  indexScore: player.indexScore,
+})));

@@ -44,7 +44,7 @@ class Player {
   }
 
   isPlayingAgainstMostScorableTeam(mostScorableTeam) {
-    return this.awayTeam === mostScorableTeam.name;
+    return this.playingAgainstTeam === mostScorableTeam.name;
   }
 
   isPlayingForLeastScorableTeam(leastScorableTeam) {
@@ -74,6 +74,8 @@ class Player {
       !this.isPlayingForFortaleza &&
       !this.isPlayingAgainstCeara &&
       this.averageScore > 0 &&
+      this.potentialScore > 0 &&
+      this.medianScore > 0 &&
       !this.isPlayingAgainstMostScorableTeam(mostScorableTeam) &&
       !this.isPlayingForLeastScorableTeam(leastScorableTeam) &&
       !this.isPlayingAgainstRival
@@ -112,7 +114,10 @@ class Player {
       this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8)
       return
     }
-    this.potentialScore = 0
+
+    const playingAgainstTeamPlayers = teams[this.playingAgainstTeam].players
+    const score = playingAgainstTeamPlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0)
+    this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8)
   }
 
   get playerId() {
