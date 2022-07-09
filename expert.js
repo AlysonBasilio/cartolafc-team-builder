@@ -152,18 +152,18 @@ class Player {
     if (this.isOffensive) {
       const playingAgainstTeamDefensivePlayers = teams[this.playingAgainstTeam].defensivePlayers;
       const score = playingAgainstTeamDefensivePlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
-      this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
+      this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8) / playingAgainstTeamDefensivePlayers.length;
       return
     } else if (this.isDefensive) {
       const playingAgainstTeamOffensivePlayers = teams[this.playingAgainstTeam].offensivePlayers;
       const score = playingAgainstTeamOffensivePlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
-      this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
+      this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8) / playingAgainstTeamOffensivePlayers.length;
       return
     }
 
     const playingAgainstTeamPlayers = teams[this.playingAgainstTeam].players;
     const score = playingAgainstTeamPlayers.map(player => player.medianScore).reduce((acc, v) => acc + this.medianScore - v, 0);
-    this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8);
+    this.potentialScore = score * (this.isPlayingForTheHomeTeam ? 1.2 : 0.8) / playingAgainstTeamPlayers.length;
   }
 
   get playerId() {
